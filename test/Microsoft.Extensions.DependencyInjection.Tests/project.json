@@ -1,6 +1,7 @@
 {
   "version": "0.1-alpha-*",
   "compilationOptions": {
+<<<<<<< HEAD
     "keyFile": "../../tools/Key.snk"
   },
   "dependencies": {
@@ -16,3 +17,31 @@
     "test": "xunit.runner.aspnet"
   }
 }
+=======
+    "keyFile": "../../tools/Key.snk",
+    "warningsAsErrors": true
+  },
+  "dependencies": {
+    "Microsoft.AspNet.Testing": "1.0.0-*",
+    "Microsoft.Extensions.DependencyInjection": "1.0.0-*",
+    "Microsoft.Extensions.DependencyInjection.Specification.Tests": "1.0.0-*",
+    "xunit": "2.1.0"
+  },
+  "frameworks": {
+    "dnx451": {
+      "dependencies": {
+        "xunit.runner.console": "2.1.0"
+      }
+    },
+    "dnxcore50": { 
+      "dependencies": {
+        "xunit.runner.aspnet": "2.0.0-aspnet-*"
+      }
+    }
+  },
+  "testRunner": "xunit",
+  "commands": {
+    "test": "xunit.runner.aspnet"
+  }
+}
+>>>>>>> refs/remotes/aspnet/dev

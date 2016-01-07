@@ -3,17 +3,17 @@
 
 using System;
 using System.Collections.Generic;
+using Microsoft.Extensions.DependencyInjection.Specification;
+using Microsoft.Extensions.DependencyInjection.Specification.Fakes;
 using Microsoft.Extensions.DependencyInjection.Tests.Fakes;
 using Xunit;
 
 namespace Microsoft.Extensions.DependencyInjection.Tests
 {
-    public class ServiceProviderContainerTests : ScopingContainerTestBase
+    public class ServiceProviderContainerTests : DependencyInjectionSpecificationTests
     {
-        protected override IServiceProvider CreateContainer()
-        {
-            return TestServices.DefaultServices().BuildServiceProvider();
-        }
+        protected override IServiceProvider CreateServiceProvider(IServiceCollection collection) =>
+            collection.BuildServiceProvider();
 
         [Fact]
         public void RethrowOriginalExceptionFromConstructor()
@@ -30,6 +30,51 @@ namespace Microsoft.Extensions.DependencyInjection.Tests
 
             var ex2 = Assert.Throws<Exception>(() => provider.GetService<ClassWithThrowingCtor>());
             Assert.Equal(nameof(ClassWithThrowingCtor), ex2.Message);
+        }
+
+        [Fact]
+        public void DependencyWithPrivateConstructorIsIdentifiedAsPartOfException()
+        {
+            // Arrange
+            var expectedMessage = $"A suitable constructor for type '{typeof(ClassWithPrivateCtor).FullName}' could not be located. "
+                + "Ensure the type is concrete and services are registered for all parameters of a public constructor.";
+            var serviceCollection = new ServiceCollection();
+            serviceCollection.AddTransient<ClassWithPrivateCtor>();
+            serviceCollection.AddTransient<ClassDependsOnPrivateConstructorClass>();
+            var serviceProvider = serviceCollection.BuildServiceProvider();
+
+            // Act and Assert
+            var ex = Assert.Throws<InvalidOperationException>(() => serviceProvider.GetServices<ClassDependsOnPrivateConstructorClass>());
+            Assert.Equal(expectedMessage, ex.Message);
+        }
+
+        [Fact]
+        public void AttemptingToResolveNonexistentServiceIndirectlyThrows()
+        {
+            // Arrange
+            var collection = new ServiceCollection();
+            collection.AddTransient<DependOnNonexistentService>();
+            var provider = CreateServiceProvider(collection);
+
+            // Act and Assert
+            var ex = Assert.Throws<InvalidOperationException>(() => provider.GetService<DependOnNonexistentService>());
+            Assert.Equal($"Unable to resolve service for type '{typeof(IFakeService)}' while attempting to activate " +
+                $"'{typeof(DependOnNonexistentService)}'.", ex.Message);
+        }
+
+        [Fact]
+        public void AttemptingToIEnumerableResolveNonexistentServiceIndirectlyThrows()
+        {
+            // Arrange
+            var collection = new ServiceCollection();
+            collection.AddTransient<DependOnNonexistentService>();
+            var provider = CreateServiceProvider(collection);
+
+            // Act and Assert
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+                provider.GetService<IEnumerable<DependOnNonexistentService>>());
+            Assert.Equal($"Unable to resolve service for type '{typeof(IFakeService)}' while attempting to activate " +
+                $"'{typeof(DependOnNonexistentService)}'.", ex.Message);
         }
 
         [Theory]
@@ -58,7 +103,7 @@ namespace Microsoft.Extensions.DependencyInjection.Tests
 
         private abstract class AbstractFakeOpenGenericService<T> : IFakeOpenGenericService<T>
         {
-            public abstract T SimpleMethod();
+            public abstract T Value { get; }
         }
     }
 }
